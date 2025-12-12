@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Procesar Documento PDF</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-5">
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">Procesar Documento PDF (Funcionalidad Manual)</h3>
+        </div>
+
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} alert-dismissible fade show" role="alert">
+                        <strong>{{ message }}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label for="id_ruta_archivo" class="form-label"><strong>1. Seleccione el archivo PDF:</strong></label>
+
+                    {{ form.ruta_archivo }}
+
+                    <div class="text-danger small">
+                        {{ form.ruta_archivo.errors }}
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        ▶ Ejecutar Procesamiento
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-footer text-muted text-center">
+            Prototipo MDD - Fase de Implementación (IM)
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
