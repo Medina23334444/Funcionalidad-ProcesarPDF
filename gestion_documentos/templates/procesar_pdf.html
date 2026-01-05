@@ -1,53 +1,135 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Procesar Documento PDF</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="container mt-5">
+{% extends 'base.html' %}
 
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0">Procesar Documento PDF (Funcionalidad Manual)</h3>
+{% block content %}
+    <div class="row">
+        <div class="col-md-12 mb-5">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex align-items-center py-3">
+                    <i class="bi bi-cloud-upload fs-4 me-2"></i>
+                    <h5 class="mb-0">Procesar Nuevo Documento</h5>
+                </div>
+                <div class="card-body bg-light p-4">
+                    <p class="text-muted mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Seleccione un archivo PDF (Máx 50MB) para analizar su estructura y preparar la accesibilidad.
+                    </p>
+
+                    <form method="post" enctype="multipart/form-data" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-md-9">
+                            <label for="id_ruta_archivo" class="form-label fw-bold text-dark">Archivo PDF</label>
+                            <input type="file" name="ruta_archivo" class="form-control form-control-lg bg-white"
+                                   accept=".pdf" id="id_ruta_archivo" required>
+                            {% if form.ruta_archivo.errors %}
+                                <div class="text-danger small mt-1">
+                                    <i class="bi bi-exclamation-triangle"></i> {{ form.ruta_archivo.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-success btn-lg w-100 shadow-sm">
+                                <i class="bi bi-gear-fill me-2"></i> Procesar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
-        <div class="card-body">
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} alert-dismissible fade show" role="alert">
-                        <strong>{{ message }}</strong>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
+                    <h5 class="mb-0 text-secondary"><i class="bi bi-table me-2"></i>Documentos Gestionados</h5>
+                    <span class="badge bg-secondary rounded-pill px-3">{{ documentos.count }} Archivos</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="ps-4 py-3">Archivo</th>
+                                <th scope="col" class="py-3">Metadatos Extraídos</th>
+                                <th scope="col" class="text-center py-3">Estado</th>
+                                <th scope="col" class="text-end pe-4 py-3">Acciones Disponibles</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for doc in documentos %}
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-light p-2 rounded me-3 border">
+                                                <i class="bi bi-file-earmark-pdf-fill text-danger fs-3"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ doc.nombre_archivo }}</div>
+                                                <small class="text-muted">ID: #{{ doc.id }}
+                                                    | {{ doc.fecha_creacion|default:"Reciente" }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <ul class="list-unstyled mb-0 small text-muted">
+                                            <li><i class="bi bi-hdd me-2"></i>{{ doc.tamanio|floatformat:2 }} MB</li>
+                                            <li><i class="bi bi-files me-2"></i>{{ doc.numero_paginas }} Páginas</li>
+                                        </ul>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if doc.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-secondary status-badge rounded-pill">Pendiente</span>
+                                        {% elif doc.estado == 'VALIDADO' %}
+                                            <span class="badge bg-info text-dark status-badge rounded-pill">
+                                            <i class="bi bi-check-circle me-1"></i> Validado
+                                        </span>
+                                        {% elif doc.estado == 'CONVERTIDO' %}
+                                            <span class="badge bg-success status-badge rounded-pill">
+                                            <i class="bi bi-check-all me-1"></i> HTML Listo
+                                        </span>
+                                        {% elif doc.estado == 'ERROR' %}
+                                            <span class="badge bg-danger status-badge rounded-pill">Error</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group" role="group">
+                                            {% if doc.estado == 'VALIDADO' or doc.estado == 'CONVERTIDO' %}
+                                                <a href="{% url 'convertir_html' doc.id %}"
+                                                   class="btn btn-outline-primary btn-sm"
+                                                   title="Generar versión HTML accesible (RF02)">
+                                                    <i class="bi bi-filetype-html"></i> Convertir
+                                                </a>
+                                            {% endif %}
 
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
+                                            {% if doc.estado == 'CONVERTIDO' and doc.html_generado %}
+                                                <a href="{% url 'descargar_html' doc.id %}"
+                                                   class="btn btn-outline-success btn-sm"
+                                                   title="Descargar archivo (RF05)">
+                                                    <i class="bi bi-download"></i> Descargar
+                                                </a>
+                                            {% endif %}
 
-                <div class="mb-4">
-                    <label for="id_ruta_archivo" class="form-label"><strong>1. Seleccione el archivo PDF:</strong></label>
-
-                    {{ form.ruta_archivo }}
-
-                    <div class="text-danger small">
-                        {{ form.ruta_archivo.errors }}
+                                            {% if doc.estado == 'ERROR' %}
+                                                <button class="btn btn-outline-danger btn-sm disabled"
+                                                        title="Archivo corrupto">
+                                                    <i class="bi bi-x-circle"></i> Fallido
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted bg-light">
+                                        <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary"></i>
+                                        <p class="mb-0">No hay documentos procesados aún.</p>
+                                        <small>Utilice el formulario superior para cargar el primer PDF.</small>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success btn-lg">
-                        ▶ Ejecutar Procesamiento
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div class="card-footer text-muted text-center">
-            Prototipo MDD - Fase de Implementación (IM)
+            </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}
